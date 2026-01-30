@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Reconciliation System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .upload-section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .upload-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .file-input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-input-wrapper label {
+            color: #555;
+            font-weight: 500;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .file-input-wrapper input[type="file"]:hover {
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status-message.loading {
+            background: #cfe2ff;
+            color: #084298;
+            border: 1px solid #b6d4fe;
+            display: block;
+        }
+
+        .results-section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+        }
+
+        .results-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        table thead {
+            background: #f8f9fa;
+            border-bottom: 2px solid #ddd;
+        }
+
+        table th {
+            padding: 15px;
+            text-align: left;
+            color: #555;
+            font-weight: 600;
+        }
+
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-both {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-settlement {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-statement {
+            background: #cfe2ff;
+            color: #084298;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .file-input-group {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="upload-section">
+            <h2>Upload Files</h2>
+
+            <div id="statusMessage" class="status-message"></div>
+
+            <div class="file-input-group">
+                <div class="file-input-wrapper">
+                    <label for="statementFile">Upload Statement File</label>
+                    <input type="file" id="statementFile" accept=".xlsx,.xls" />
+                </div>
+                <div class="file-input-wrapper">
+                    <label for="settlementFile">Upload Settlement File</label>
+                    <input type="file" id="settlementFile" accept=".xlsx,.xls" />
+                </div>
+            </div>
+
+            <button class="btn-primary" id="uploadBtn">Submit</button>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <h2>Results</h2>
+
+            <div class="table-wrapper">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>PartnerPin</th>
+                            <th>Status</th>
+                            <th>Source</th>
+                            <th>Amounts</th>
+                            <th>Variance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                    </tbody>
+                </table>
+                <div id="noData" class="no-data">No transactions to display</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statusMessage = document.getElementById('statusMessage');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const statementFile = document.getElementById('statementFile');
+        const settlementFile = document.getElementById('settlementFile');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsBody = document.getElementById('resultsBody');
+        const noData = document.getElementById('noData');
+
+        let currentData = [];
+
+        function showMessage(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    statusMessage.className = 'status-message';
+                }, 5000);
+            }
+        }
+
+        function formatAmount(amount) {
+            if (amount === null || amount === undefined) return 'N/A';
+            return parseFloat(amount).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function getStatusBadge(status) {
+            let className = 'status-badge';
+            let displayText = '';
+            
+            if (status === 'Present in Both') {
+                className += ' status-both';
+                displayText = '5';
+            } else if (status === 'Present in the Settlement File but not in the Partner Statement File') {
+                className += ' status-settlement';
+                displayText = '6';
+            } else if (status === 'Not Present in the Settlement File but Present in the Partner Statement File') {
+                className += ' status-statement';
+                displayText = '7';
+            } else {
+                displayText = status; // fallback
+            }
+
+            return `<span class="${className}">${displayText}</span>`;
+        }
+
+        function getSource(status) {
+            if (status === 'Present in Both') {
+                return 'Both Files';
+            } else if (status === 'Present in the Settlement File but not in the Partner Statement File') {
+                return 'Settlement';
+            } else if (status === 'Not Present in the Settlement File but Present in the Partner Statement File') {
+                return 'Statement';
+            } else {
+                return 'Unknown';
+            }
+        }
+
+        async function uploadFiles() {
+            if (!statementFile.files[0] || !settlementFile.files[0]) {
+                showMessage('Please select both Statement and Settlement files', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('statement', statementFile.files[0]);
+            formData.append('settlement', settlementFile.files[0]);
+
+            uploadBtn.disabled = true;
+            showMessage('Processing files...', 'loading');
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('Files processed successfully!', 'success');
+                    await loadTransactions();
+                    resultsSection.style.display = 'block';
+                } else {
+                    showMessage(`Error: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+            }
+        }
+
+        async function loadTransactions() {
+            try {
+                const response = await fetch('/api/transactions');
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    currentData = result.data;
+                    renderTable();
+                }
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+            }
+        }
+
+        function renderTable() {
+            if (currentData.length === 0) {
+                resultsBody.innerHTML = '';
+                noData.style.display = 'block';
+                return;
+            }
+
+            noData.style.display = 'none';
+            resultsBody.innerHTML = currentData.map(row => `
+                <tr>
+                    <td><strong>${row.PartnerPin}</strong></td>
+                    <td>${getStatusBadge(row.Status)}</td>
+                    <td>${getSource(row.Status)}</td>
+                    <td>
+                        ${row.StatementAmount ? 'Statement: $' + formatAmount(row.StatementAmount) : ''}
+                        ${row.StatementAmount && row.SettlementAmount ? '<br>' : ''}
+                        ${row.SettlementAmount ? 'Settlement: $' + formatAmount(row.SettlementAmount) : ''}
+                        ${!row.StatementAmount && !row.SettlementAmount ? 'N/A' : ''}
+                    </td>
+                    <td>${row.Variance ? '$' + formatAmount(row.Variance) : 'N/A'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Event listeners
+        uploadBtn.addEventListener('click', uploadFiles);
+    </script>
+</body>
+</html>
