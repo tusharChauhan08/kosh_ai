@@ -24,18 +24,6 @@ processed_data = {
 }
 
 
-def extract_partner_pin(description):
-    if pd.isna(description):
-        return None
-    
-    desc_str = str(description).strip()
-    match = re.search(r'(\d{9})$', desc_str)
-
-    if match:
-        return match.group(1)
-    
-    return None
-
 
 def extract_partner_pin_from_statement(col_d_value):
     if pd.isna(col_d_value):
@@ -48,16 +36,6 @@ def extract_partner_pin_from_statement(col_d_value):
     
     return None
 
-
-def extract_partner_pin_from_settlement(pin_value):
-    if pd.isna(pin_value):
-        return None
-    pin_str = str(pin_value).strip()
-
-    if len(pin_str) >= 8:
-        return pin_str
-    
-    return None
 
 
 def find_duplicates_by_pin(df, pin_column):
